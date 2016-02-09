@@ -282,7 +282,7 @@ public class challenge6 {
 
         //Un Base64 it to get XOR'd hex
         String XORedHex = printHexBinary(parseBase64Binary(cypherText));
-        byte[] XORedBytes = parseBase64Binary(cypherText);
+        System.out.println(XORedHex);
 
         //Calc Hamming Dist of first keysize bytes and second keysize bytes
         //Probably easier to use substrings to pass than byte[]
@@ -296,7 +296,7 @@ public class challenge6 {
 
             //If the hamm dist is less than one, add the keysize as a candidate
             if ( avgHD < 2.0f ){
-                System.out.println("Added! " + avgHD);
+                System.out.println("Possible Keysize " + keysize + " with avgHD of " + avgHD);
                 keysizeCandidates.add(keysize);
             }
 
