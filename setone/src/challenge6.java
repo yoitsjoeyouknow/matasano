@@ -297,7 +297,7 @@ public class challenge6 {
     }
 
     public static ArrayList<String> blockTranspose(String longText, int keysize){
-        //System.out.println("LongText: " + longText);
+        System.out.println("LongText: " + longText);
         System.out.println("Keysize: " + keysize);
 
         //init the blocks
@@ -316,7 +316,7 @@ public class challenge6 {
             }
 
             blocks.add(block.toString());
-            //System.out.println("Block: " + block.toString());
+            System.out.println("Block: " + block.toString());
         }
 
 
@@ -332,7 +332,7 @@ public class challenge6 {
         System.out.println("Hamming Distance between \"" + first + "\" and \"" + second + "\" is " + calcHamming(first, second));
 
         //Read in the file
-        String dir = System.getProperty("user.dir") + "\\setone\\src\\6test.txt";
+        String dir = System.getProperty("user.dir") + "\\setone\\src\\CHALLENGE.txt";
         String cypherText = fileReader(dir);
 
         //Un Base64 it to get XOR'd hex
@@ -340,9 +340,9 @@ public class challenge6 {
         System.out.println("Cyphertext to break :\n" + XORedHex);
 
         //Rudimentary XORer
-        byte[] de64dcypher = Base64.getDecoder().decode(cypherText);
-        System.out.println(textToHex(printHexBinary(de64dcypher)));
-        xorer(printHexBinary(de64dcypher));
+        //byte[] de64dcypher = Base64.getDecoder().decode(cypherText);
+        //System.out.println(textToHex(printHexBinary(de64dcypher)));
+        //xorer(printHexBinary(de64dcypher));
 
         //Calc Hamming Dist of first keysize bytes and second keysize bytes
         int maxKeysize = 40;
@@ -354,7 +354,7 @@ public class challenge6 {
             float avgHD = analyseXOR(XORedHex, keysize);
 
             //If the hamm dist is less than one, add the keysize as a candidate
-            if ( avgHD < 2.0f ){
+            if ( avgHD < 3.0f ){
                 System.out.println("Possible Keysize " + keysize + " with avgHD of " + avgHD);
                 keysizeCandidates.add(keysize);
             }
