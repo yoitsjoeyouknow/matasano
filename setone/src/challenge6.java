@@ -4,7 +4,6 @@ package src;
  * Created by Joseph on 009 9 Jan.
  */
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.BufferedReader;
@@ -12,8 +11,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Base64;
 
 import static javax.xml.bind.DatatypeConverter.*;
 
@@ -146,10 +145,11 @@ public class challenge6 {
             charsSet = new String[] {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
         }
         if (mode == "english") {
-            charsSet = new String[] {" ","e","t","a","j","x","q","z"};
+            charsSet = new String[] {" ","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"};
         }
 
         //Init vars
+        Integer[] freqs = new Integer[] {8500,8167,1492,2782,4253,12702,2228,2015,6094,6966,153,772,4025,2406,6749,7507,1929,95,5987,6327,9056,2758,978,2361,150,1974,74};
         int[] frequency = new int[charsSet.length];
         int maximum = 0;
 
@@ -159,11 +159,16 @@ public class challenge6 {
             if (frequency[i] > maximum){ maximum = frequency[i]; }
         }
 
-        if (mode == "english") {
-            int score = (int) ((frequency[0]*3)+(frequency[1]*2.5)+(frequency[2]*2)+(frequency[3]*1.5)+
-                    (frequency[4]*0.5)+(frequency[5]*0.4)+(frequency[6]*0.3)+(frequency[7]*0.2));
-            if (score > 120 && StringUtils.isAsciiPrintable(cypherstring)) {
-                System.out.println(score);
+        if (mode.equals("english")) {
+
+            int score, sum = 0;
+            for (int j = 0; j < frequency.length; j++){
+                sum += frequency[j] * freqs[j];
+            }
+            score = sum / cypherstring.length();
+            //score > 2000 && StringUtils.isAsciiPrintable(cypherstring) is the if statement
+            if (score > 5000) {
+                //System.out.println("Plaintext: " + score + "\n" + cypherstring);
             }
             return score;
         }
@@ -189,6 +194,8 @@ public class challenge6 {
 
         //Char key and start brute force
         byte key;
+        //0x52 is the Known Key for singleCharXOR.txt
+        //Replace with Byte.MIN_VALUE and Byte.MAX_VALUE to restore byte-wise guessing
         for (key = Byte.MIN_VALUE; key < Byte.MAX_VALUE; key++) {
 
             byte[] output = new byte[ciphertext.length];
@@ -212,7 +219,21 @@ public class challenge6 {
 
         }
 
+        System.out.println("Plaintext score: " + maximum + "\n" + candidate);
         return candidate;
+    }
+
+    public static String xorer(String cyphertext) {
+        byte[] cypherhex = parseHexBinary(cyphertext);
+
+        byte[] plaintext = new byte[cypherhex.length];
+        byte key = 0x52;
+        for (int i = 0; i < cypherhex.length; i++){
+            plaintext[i] = (byte)(cypherhex[i] ^ key);
+        }
+        String output = byteArrayToString(plaintext);
+        System.out.println(hexToString(output));
+        return output;
     }
 
     //Reads in a file and returns a string of the contents
@@ -254,6 +275,12 @@ public class challenge6 {
         return new String();
     }
 
+    /**
+     * Calculates the avgHD for 4 keysize blocks of the cyphertext
+     * @param XORedHex
+     * @param keysize
+     * @return the avgHD value
+     */
     public static float analyseXOR(String XORedHex, int keysize){
         //Get HD for 4 substrings of XORedHex
         int sum = calcHamming(XORedHex.substring(0, keysize),XORedHex.substring(keysize, 2 * keysize));
@@ -269,6 +296,34 @@ public class challenge6 {
         return average;
     }
 
+    public static ArrayList<String> blockTranspose(String longText, int keysize){
+        //System.out.println("LongText: " + longText);
+        System.out.println("Keysize: " + keysize);
+
+        //init the blocks
+        ArrayList<String> blocks = new ArrayList<>();
+
+        //for each char in keysize
+        for (int i = 0; i < keysize; i+=2){
+            StringBuilder block = new StringBuilder();
+
+            //construct the block by adding every keysize'th char
+            int j = i;
+            while ( j < longText.length() ){
+                block.append(longText.charAt(j));
+                block.append(longText.charAt(j+1));
+                j += keysize;
+            }
+
+            blocks.add(block.toString());
+            //System.out.println("Block: " + block.toString());
+        }
+
+
+        //return the blocks
+        return blocks;
+    }
+
     public static void main(String[] args){
 
         //Confirm that the Hamming Dist works... it do!
@@ -277,20 +332,24 @@ public class challenge6 {
         System.out.println("Hamming Distance between \"" + first + "\" and \"" + second + "\" is " + calcHamming(first, second));
 
         //Read in the file
-        String dir = System.getProperty("user.dir") + "\\setone\\src\\6.txt";
+        String dir = System.getProperty("user.dir") + "\\setone\\src\\6test.txt";
         String cypherText = fileReader(dir);
 
         //Un Base64 it to get XOR'd hex
         String XORedHex = printHexBinary(parseBase64Binary(cypherText));
-        System.out.println(XORedHex);
+        System.out.println("Cyphertext to break :\n" + XORedHex);
+
+        //Rudimentary XORer
+        byte[] de64dcypher = Base64.getDecoder().decode(cypherText);
+        System.out.println(textToHex(printHexBinary(de64dcypher)));
+        xorer(printHexBinary(de64dcypher));
 
         //Calc Hamming Dist of first keysize bytes and second keysize bytes
-        //Probably easier to use substrings to pass than byte[]
         int maxKeysize = 40;
         ArrayList<Integer> keysizeCandidates = new ArrayList<>();
 
         //Generate array of Hamming Distances
-        for (int keysize = 2; keysize < maxKeysize; keysize++) {
+        for (int keysize = 2; keysize < maxKeysize; keysize+=2) {
 
             float avgHD = analyseXOR(XORedHex, keysize);
 
@@ -314,45 +373,65 @@ public class challenge6 {
         //First separate into byte sized blocks for per-byte brute forcing
 
         //For each keysize candidate
+        ArrayList<String> finalPlaintexts = new ArrayList<>();
         for (int i : keysizeCandidates){
 
             //Let's get an array going to hold the blocks...
-            ArrayList<String> cypherBlocks = new ArrayList<>();
+            ArrayList<String> cypherBlocks = blockTranspose(XORedHex, i);
 
             //For each byte of the keysize
-            for (int j = 0; j < i; j=j+2){
+            //for (int j = 0; j < i; j=j+2){
 
-                StringBuilder block = new StringBuilder();
+                //StringBuilder block = new StringBuilder();
 
                 //For every 'i'th byte to form the block
-                for (int k = j; k < XORedHex.length(); k = k + i){
-                    try {
-                        block.append(XORedHex.substring(k ,(k + 2)));
-                    }
-                    catch (StringIndexOutOfBoundsException UpperLimitEx){
+                //for (int k = j; k < XORedHex.length(); k = k + i){
+                    //try {
+                       // block.append(XORedHex.substring(k ,(k + 2)));
+                    //}
+                    //catch (StringIndexOutOfBoundsException UpperLimitEx){
                         //end of string reached. Need to avoid odd-number length blocks.
-                    }
-                }
-                cypherBlocks.add(block.toString());
+                    //}
+                //}
+                //cypherBlocks.add(block.toString());
                 //System.out.println(block.toString());
-            }
+            //}
 
             //Now let's brute force each block.
             //Remember, each block has it's own key...
 
             StringBuilder plaintext = new StringBuilder();
+            ArrayList<String> plainBlocks = new ArrayList<>();
+            int blockCount = 1;
             for (String block : cypherBlocks){
-
-                plaintext.append(bruteForce(block));
+                System.out.println("BLOCK " + blockCount);
+                plainBlocks.add(bruteForce(block));
+                blockCount++;
             }
-            System.out.println((plaintext.toString()));
+            int charIndex = 0;
+            int maxIndex = plainBlocks.get(0).length();
+            while (charIndex < maxIndex){
+                for (String block : plainBlocks) {
+                    try {
+                        plaintext.append(block.charAt(charIndex));
+                    }
+                    catch (StringIndexOutOfBoundsException ex){break;}
+                }
+                charIndex++;
+            }
+            System.out.println("Transposed Plaintext Block: \n" + plaintext.toString());
+            finalPlaintexts.add(plaintext.toString());
 
+        }
+        System.out.println("\n\n########~~ FINAL PLAINTEXTS ~~########\n");
+        for(String finals : finalPlaintexts){
+            System.out.println(finals + "\n");
         }
 
     }
 }
 /**Problems:
- *The plaintext was base64'd after encryption. I'm not looking for English...
+ *The plaintext was base64'd after encryption. I'm not looking for English... yes I am!
  * Need to come up with a new way to measure the bruteforces for correctness
  * Although it easier to filter out by AlphaNumeric now
  * "It's [Plaintext] been base64'd after being encrypted with repeating-key XOR."
